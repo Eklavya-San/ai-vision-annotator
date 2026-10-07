@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { AnnotationRequest, AnnotationResult, VisionModelConfig } from '@vision-annotator/shared';
+import { parseAnnotationResult } from './annotation-result.schema';
 import type { VisionProvider } from './vision.provider';
 
 export class OpenAICompatibleVisionProvider implements VisionProvider {
@@ -15,13 +16,20 @@ export class OpenAICompatibleVisionProvider implements VisionProvider {
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: `${request.instructions}\nLabels: ${request.labels.join(', ')}\nReturn JSON only.` },
+          {
+            type: 'text',
+            text: `${request.instructions}\nLabels: ${request.labels.join(', ')}\nReturn JSON only using {"annotations":[{"label":"...","confidence":0,"bbox":{"x":0,"y":0,"width":0,"height":0},"polygon":[{"x":0,"y":0}]}]}. Include either bbox or polygon for each annotation.`,
+          },
           { type: 'image_url', image_url: { url: request.imageUrl } },
         ],
       }],
     });
 
-    const content = response.choices[0]?.message?.content ?? '{"annotations":[]}';
-    return JSON.parse(content) as AnnotationResult;
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('Vision model returned an empty response');
+    }
+
+    return parseAnnotationResult(content);
   }
 }
