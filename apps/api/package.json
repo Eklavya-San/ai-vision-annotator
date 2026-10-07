@@ -13,10 +13,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
     "@aws-sdk/s3-request-presigner": "^3.901.0",
+    "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
-    "@nestjs/config": "^4.0.0",
     "@prisma/client": "^6.17.0",
     "@vision-annotator/shared": "workspace:*",
     "bullmq": "^5.58.0",

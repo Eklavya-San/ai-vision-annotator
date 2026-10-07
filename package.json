@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "yarn@4.10.3",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "yarn workspaces foreach -A -p run dev",
     "build": "yarn workspaces foreach -A run build",
