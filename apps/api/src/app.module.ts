@@ -5,6 +5,7 @@ import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { QueueModule } from './queue/queue.module';
 import { StorageModule } from './storage/storage.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { StorageModule } from './storage/storage.module';
     DatabaseModule,
     QueueModule,
     StorageModule,
+    ProjectsModule,
   ],
   controllers: [HealthController],
 })
