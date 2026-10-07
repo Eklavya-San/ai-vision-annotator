@@ -8,14 +8,14 @@ datasource db {
 }
 
 model Provider {
-  id             String   @id @default(cuid())
-  name           String
-  type           String   @default("openai-compatible")
-  baseUrl        String
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("openai-compatible")
+  baseUrl         String
   encryptedApiKey String?
-  enabled        Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   models Model[]
 
@@ -23,18 +23,68 @@ model Provider {
 }
 
 model Model {
-  id         String   @id @default(cuid())
-  providerId String
-  modelId    String
-  name       String?
+  id           String   @id @default(cuid())
+  providerId   String
+  modelId      String
+  name         String?
   capabilities Json?
-  pricing    Json?
-  enabled    Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  pricing      Json?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  datasets Dataset[]
 
   @@unique([providerId, modelId])
   @@index([enabled])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  datasets Dataset[]
+
+  @@index([createdAt])
+}
+
+model Dataset {
+  id           String    @id @default(cuid())
+  projectId    String
+  modelId      String?
+  name         String
+  instructions String?
+  labels       Json
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  model   Model?  @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  images  Image[]
+
+  @@index([projectId, createdAt])
+}
+
+model Image {
+  id           String    @id @default(cuid())
+  datasetId    String
+  storageKey   String    @unique
+  originalName String
+  mimeType     String
+  sizeBytes    BigInt
+  sha256       String
+  width        Int?
+  height       Int?
+  status       String    @default("uploaded")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@unique([datasetId, sha256])
+  @@index([datasetId, status, createdAt])
 }
