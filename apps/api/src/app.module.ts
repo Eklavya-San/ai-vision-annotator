@@ -9,6 +9,8 @@ import { ProjectsModule } from './projects/projects.module';
 import { DatasetsModule } from './datasets/datasets.module';
 import { ImagesModule } from './images/images.module';
 import { ProvidersModule } from './providers/providers.module';
+import { AnnotationsModule } from './annotations/annotations.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { ProvidersModule } from './providers/providers.module';
     DatasetsModule,
     ImagesModule,
     ProvidersModule,
+    AnnotationsModule,
+    ExportModule,
   ],
   controllers: [HealthController],
 })

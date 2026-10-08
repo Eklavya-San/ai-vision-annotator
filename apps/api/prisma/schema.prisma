@@ -33,7 +33,7 @@ model Model {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
   datasets Dataset[]
 
   @@unique([providerId, modelId])
@@ -41,11 +41,11 @@ model Model {
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   datasets Dataset[]
 
@@ -53,14 +53,14 @@ model Project {
 }
 
 model Dataset {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   projectId    String
   modelId      String?
   name         String
   instructions String?
   labels       Json
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   model   Model?  @relation(fields: [modelId], references: [id], onDelete: SetNull)
@@ -70,21 +70,38 @@ model Dataset {
 }
 
 model Image {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   datasetId    String
-  storageKey   String    @unique
+  storageKey   String   @unique
   originalName String
   mimeType     String
   sizeBytes    BigInt
   sha256       String
   width        Int?
   height       Int?
-  status       String    @default("uploaded")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  status       String   @default("uploaded")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  dataset     Dataset      @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  annotations Annotation[]
 
   @@unique([datasetId, sha256])
   @@index([datasetId, status, createdAt])
+}
+
+model Annotation {
+  id          String   @id @default(cuid())
+  imageId     String
+  label       String
+  confidence  Float?
+  bbox        Json?
+  polygon     Json?
+  isCorrected Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@index([imageId, label])
 }

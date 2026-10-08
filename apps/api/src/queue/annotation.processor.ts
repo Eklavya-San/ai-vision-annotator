@@ -29,9 +29,26 @@ export class AnnotationProcessor extends WorkerHost {
       const imageUrl = await this.storage.createDownloadUrl(storageKey);
       const result = await this.providers.annotate({ imageUrl, instructions, labels });
 
-      await this.prisma.image.update({
-        where: { id: imageId },
-        data: { status: 'annotated' },
+      await this.prisma.$transaction(async (tx) => {
+        // Re-runs replace prior annotations for the image (idempotent).
+        await tx.annotation.deleteMany({ where: { imageId } });
+
+        if (result.annotations.length > 0) {
+          await tx.annotation.createMany({
+            data: result.annotations.map((annotation) => ({
+              imageId,
+              label: annotation.label,
+              confidence: annotation.confidence ?? null,
+              bbox: annotation.bbox ?? undefined,
+              polygon: annotation.polygon ?? undefined,
+            })),
+          });
+        }
+
+        await tx.image.update({
+          where: { id: imageId },
+          data: { status: 'annotated' },
+        });
       });
     } catch (error) {
       await this.prisma.image.update({
