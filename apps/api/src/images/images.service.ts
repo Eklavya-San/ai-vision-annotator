@@ -49,16 +49,32 @@ export class ImagesService {
     });
   }
 
-  async listImages(datasetId: string): Promise<ImageWithDownloadUrl[]> {
-    const images = await this.prisma.image.findMany({
+  async listImages(datasetId: string): Promise<Array<ImageWithDownloadUrl & { annotationCount: number }>> {
+    const rows = await this.prisma.image.findMany({
       where: { datasetId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        datasetId: true,
+        storageKey: true,
+        originalName: true,
+        mimeType: true,
+        sizeBytes: true,
+        sha256: true,
+        width: true,
+        height: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { annotations: true } },
+      },
     });
 
     return Promise.all(
-      images.map(async (image) => ({
+      rows.map(async (image) => ({
         ...image,
         downloadUrl: await this.storage.createDownloadUrl(image.storageKey),
+        annotationCount: image._count.annotations,
       })),
     );
   }
