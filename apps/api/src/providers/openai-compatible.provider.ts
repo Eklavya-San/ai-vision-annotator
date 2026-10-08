@@ -1,8 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import type { AnnotationRequest, AnnotationResult, VisionModelConfig } from '@vision-annotator/shared';
 import { parseAnnotationResult } from './annotation-result.schema';
 import type { VisionProvider } from './vision.provider';
 
+@Injectable()
 export class OpenAICompatibleVisionProvider implements VisionProvider {
   async annotate(request: AnnotationRequest, config: VisionModelConfig): Promise<AnnotationResult> {
     const client = new OpenAI({

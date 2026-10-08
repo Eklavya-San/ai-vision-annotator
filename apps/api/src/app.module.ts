@@ -8,6 +8,7 @@ import { StorageModule } from './storage/storage.module';
 import { ProjectsModule } from './projects/projects.module';
 import { DatasetsModule } from './datasets/datasets.module';
 import { ImagesModule } from './images/images.module';
+import { ProvidersModule } from './providers/providers.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ImagesModule } from './images/images.module';
     ProjectsModule,
     DatasetsModule,
     ImagesModule,
+    ProvidersModule,
   ],
   controllers: [HealthController],
 })
