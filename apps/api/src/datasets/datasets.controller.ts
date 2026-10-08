@@ -20,4 +20,9 @@ export class DatasetsController {
   findOne(@Param('id') id: string) {
     return this.datasets.findOne(id);
   }
+
+  @Post('datasets/:id/annotate')
+  annotate(@Param('id') id: string) {
+    return this.datasets.triggerAnnotation(id);
+  }
 }
