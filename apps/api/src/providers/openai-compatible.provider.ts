@@ -8,7 +8,7 @@ import type { VisionProvider } from './vision.provider';
 export class OpenAICompatibleVisionProvider implements VisionProvider {
   async annotate(request: AnnotationRequest, config: VisionModelConfig): Promise<AnnotationResult> {
     const client = new OpenAI({
-      apiKey: process.env.OPENAI_COMPATIBLE_API_KEY ?? 'not-needed',
+      apiKey: process.env.OPENAI_COMPATIBLE_API_KEY || process.env.OPENAI_API_KEY || 'not-needed',
       baseURL: config.baseUrl,
     });
 
