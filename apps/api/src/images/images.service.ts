@@ -27,10 +27,10 @@ export class ImagesService {
     private readonly storage: StorageService,
   ) {}
 
-  async createPresignedUpload(datasetId: string, dto: PresignUploadDto): Promise<{ key: string; uploadUrl: string }> {
+  async createPresignedUpload(datasetId: string, dto: PresignUploadDto): Promise<{ key: string; storageKey: string; uploadUrl: string; contentType: string }> {
     const key = `datasets/${datasetId}/${randomUUID()}-${dto.filename}`;
     const uploadUrl = await this.storage.createUploadUrl(key, dto.mimeType);
-    return { key, uploadUrl };
+    return { key, storageKey: key, uploadUrl, contentType: dto.mimeType };
   }
 
   registerImage(datasetId: string, dto: RegisterImageDto) {

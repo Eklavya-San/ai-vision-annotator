@@ -94,11 +94,14 @@ export const registerImage = (
  * the image with the API. Resolves when the row exists.
  */
 export async function uploadImage(datasetId: string, file: File): Promise<DatasetImage> {
-  const { uploadUrl, storageKey, contentType } = await presignUpload(
+  const presign = await presignUpload(
     datasetId,
     file.name,
     file.type || 'application/octet-stream',
   );
+  const uploadUrl = presign.uploadUrl;
+  const storageKey = presign.storageKey || (presign as any).key;
+  const contentType = presign.contentType || file.type || 'application/octet-stream';
 
   // Read dimensions client-side so the grid has aspect-ratio metadata.
   const { width, height } = await readImageDimensions(file).catch(() => ({ width: undefined, height: undefined }));
