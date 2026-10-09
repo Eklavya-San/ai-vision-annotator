@@ -1,10 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  CreateBucketCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
-export class StorageService {
+export class StorageService implements OnModuleInit {
+  private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
   private readonly bucket: string;
 
@@ -19,6 +26,31 @@ export class StorageService {
         secretAccessKey: config.getOrThrow<string>('S3_SECRET_KEY'),
       },
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureBucketExists().catch((err: Error) => {
+      this.logger.warn(`Could not verify or create S3 bucket "${this.bucket}": ${err.message}`);
+    });
+  }
+
+  async ensureBucketExists(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch (err: unknown) {
+      const errorObj = err as { $metadata?: { httpStatusCode?: number }; name?: string };
+      if (
+        errorObj?.$metadata?.httpStatusCode === 404 ||
+        errorObj?.name === 'NotFound' ||
+        errorObj?.name === 'NoSuchBucket'
+      ) {
+        this.logger.log(`Bucket "${this.bucket}" does not exist, creating it...`);
+        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+        this.logger.log(`Bucket "${this.bucket}" created successfully.`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   async createUploadUrl(key: string, contentType: string, expiresIn = 900): Promise<string> {
