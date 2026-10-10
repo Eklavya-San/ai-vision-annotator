@@ -1,24 +1,22 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { PresignUploadDto, RegisterImageDto } from './dto/register-image.dto';
 
-export interface ImageWithDownloadUrl {
-  id: string;
-  datasetId: string;
-  storageKey: string;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: bigint;
-  sha256: string;
-  width: number | null;
-  height: number | null;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-  downloadUrl: string;
-}
+/**
+ * Prisma image-row shape, inferred from the generated Prisma client so it can
+ * never drift from the schema. A bare `findMany()` return is `Promise<Image[]>`,
+ * so `[number]` is exactly the model row.
+ */
+export type DbImage = Awaited<ReturnType<typeof PrismaClient.prototype.image.findMany>>[number];
+
+/**
+ * A stored image DB row plus the presigned download URL the service computes.
+ * `downloadUrl` rides along on the Prisma-derived row via intersection.
+ */
+export type ImageWithDownloadUrl = DbImage & { downloadUrl: string };
 
 @Injectable()
 export class ImagesService {
