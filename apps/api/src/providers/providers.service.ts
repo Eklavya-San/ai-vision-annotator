@@ -10,22 +10,20 @@ export class ProvidersService {
     private readonly provider: OpenAICompatibleVisionProvider,
   ) {}
 
-  private get defaultBaseUrl(): string {
-    return this.config.get<string>('OPENAI_COMPATIBLE_BASE_URL') ?? 'https://openrouter.ai/api/v1';
-  }
-
-  private get defaultModel(): string {
-    return this.config.get<string>('OPENAI_COMPATIBLE_MODEL') ?? 'qwen/qwen-2.5-vl-72b-instruct';
-  }
-
   async annotate(
     request: AnnotationRequest,
     overrideConfig?: Partial<VisionModelConfig>,
   ): Promise<AnnotationResult> {
     const config: VisionModelConfig = {
       providerType: 'openai-compatible',
-      baseUrl: overrideConfig?.baseUrl ?? this.defaultBaseUrl,
-      model: overrideConfig?.model ?? this.defaultModel,
+      baseUrl:
+        overrideConfig?.baseUrl ??
+        this.config.get<string>('OPENAI_COMPATIBLE_BASE_URL') ??
+        'https://openrouter.ai/api/v1',
+      model:
+        overrideConfig?.model ??
+        this.config.get<string>('OPENAI_COMPATIBLE_MODEL') ??
+        'qwen/qwen-2.5-vl-72b-instruct',
     };
 
     return this.provider.annotate(request, config);
