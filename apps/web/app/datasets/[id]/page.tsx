@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { focusRingClass } from '@/components/ui/input';
 import { StatusBadge, LabelBadge } from '@/components/ui/Badge';
 import { listImages, triggerAnnotation, getDataset, downloadExport } from '@/lib/api';
 import type { Dataset, DatasetImage } from '@/lib/types';
@@ -33,7 +34,7 @@ export default function DatasetPage() {
 
   React.useEffect(() => { void load(); }, [datasetId]);
 
-  // Poll for image status changes while any image is `processing`.
+  // Poll for image status changes while any image is `processing` (skips hidden tabs).
   const anyProcessing = React.useMemo(
     () => (images ?? []).some((i) => i.status === 'processing' || i.status === 'uploaded'),
     [images],
@@ -41,6 +42,7 @@ export default function DatasetPage() {
   React.useEffect(() => {
     if (!anyProcessing || annState === 'error') return;
     const t = setInterval(() => {
+      if (document.hidden) return;
       listImages(datasetId).then(setImages).catch(() => {});
     }, 2500);
     return () => clearInterval(t);
@@ -86,7 +88,7 @@ export default function DatasetPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <Link href={`/projects/${dataset.projectId}`} className="mb-6 inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        ← Back to {`«${dataset.projectName}»`}
+        ← Back to {dataset.projectName}
       </Link>
 
       <header className="mb-8">
@@ -104,32 +106,33 @@ export default function DatasetPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant={annState === 'done' ? 'secondary' : 'primary'}
               onClick={handleAnnotate}
               loading={annState === 'running'}
               disabled={annState === 'running'}
             >
-              {annState === 'done' ? 'Annotating…' : 'Annotate Dataset'}
+              {annState === 'running' ? 'Annotating…' : 'Annotate Dataset'}
             </Button>
             <ExportMenu datasetId={datasetId} name={dataset.name} />
           </div>
         </div>
-        {annState === 'error' && (
-          <p className="mt-3 inline-block rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
-            {annMsg}
-          </p>
-        )}
-        {annState === 'done' && (
-          <p className="mt-3 inline-block rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
-            {annMsg}
-          </p>
-        )}
-        {anyProcessing && (
-          <p className="mt-2 text-xs text-amber-300">
-            <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400 align-middle" />
-            Pipeline is processing… auto-refreshing status.
-          </p>
-        )}
+        <div aria-live="polite">
+          {annState === 'error' && (
+            <p role="alert" className="mt-3 inline-block rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
+              {annMsg}
+            </p>
+          )}
+          {annState === 'done' && (
+            <p role="status" className="mt-3 inline-block rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
+              {annMsg}
+            </p>
+          )}
+          {anyProcessing && (
+            <p role="status" className="mt-2 text-xs text-amber-300">
+              <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400 align-middle" />
+              Pipeline is processing… auto-refreshing status.
+            </p>
+          )}
+        </div>
       </header>
 
       <Uploader datasetId={datasetId} labels={dataset.labels} onUploaded={() => listImages(datasetId).then(setImages).catch(() => {})} />
@@ -141,35 +144,52 @@ export default function DatasetPage() {
 
 function ExportMenu({ datasetId, name }: { datasetId: string; name: string }) {
   const [open, setOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState<'yolo' | 'coco' | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+  function close(refocus = true) {
+    setOpen(false);
+    if (refocus) triggerRef.current?.focus();
+  }
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   function download(format: 'yolo' | 'coco') {
-    setBusy(format);
-    try {
-      const safe = name.replace(/\s+/g, '-').toLowerCase();
-      downloadExport(datasetId, format, `${safe}.${format === 'yolo' ? 'yolo.zip' : 'coco.zip'}`);
-    } finally {
-      setOpen(false);
-      setBusy(null);
-    }
+    const safe = name.replace(/\s+/g, '-').toLowerCase();
+    downloadExport(datasetId, format, `${safe}.${format === 'yolo' ? 'yolo.zip' : 'coco.json'}`);
+    close();
   }
 
   return (
     <div className="relative">
-      <Button variant="secondary" onClick={() => setOpen((o) => !o)}>Export</Button>
+      <Button
+        ref={triggerRef}
+        variant="secondary"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        Export
+      </Button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-border bg-card p-1 shadow-xl">
-            <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Download as</p>
+          <div className="fixed inset-0 z-10" onClick={() => close(false)} aria-hidden />
+          <div role="menu" aria-label="Export format" className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-border bg-card p-1 shadow-xl">
+            <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Download as</p>
             {(['yolo', 'coco'] as const).map((fmt) => (
               <button
                 key={fmt}
+                role="menuitem"
                 onClick={() => download(fmt)}
-                className="flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-                disabled={busy !== null}
+                className={`flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground ${focusRingClass}`}
               >
-                <span className="mt-0.5 h-2 w-2 rounded-full bg-primary/70" />
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-primary/70" aria-hidden />
                 <span>
                   <span className="font-medium capitalize">{fmt}</span>
                   <span className="block text-xs text-muted-foreground">

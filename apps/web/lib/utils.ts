@@ -26,51 +26,8 @@ export function formatPercent(confidence: number | null): string {
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-export function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  if (Number.isNaN(d)) return '';
-  const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-/**
- * Bbox center + corner points in *source image pixel* space. Returns null for
- * polygons or a missing bbox (only bboxes are resizable on the canvas).
- */
-export function bboxCorners(bbox: { x: number; y: number; width: number; height: number }) {
-  return {
-    cx: bbox.x + bbox.width / 2,
-    cy: bbox.y + bbox.height / 2,
-    tl: { x: bbox.x, y: bbox.y },
-    tr: { x: bbox.x + bbox.width, y: bbox.y },
-    bl: { x: bbox.x, y: bbox.y + bbox.height },
-    br: { x: bbox.x + bbox.width, y: bbox.y + bbox.height },
-  };
-}
-
-/** Reconstruct a bbox from an anchor corner + opposite corner (clamped to ≥1px). */
-export function bboxFromCorners(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-): { x: number; y: number; width: number; height: number } {
-  const x = Math.min(a.x, b.x);
-  const y = Math.min(a.y, b.y);
-  const width = Math.max(1, Math.abs(b.x - a.x));
-  const height = Math.max(1, Math.abs(b.y - a.y));
-  return {
-    x: Math.max(0, Math.round(x)),
-    y: Math.max(0, Math.round(y)),
-    width: Math.round(width),
-    height: Math.round(height),
-  };
+  // No hard-coded locale: respect the viewer's locale.
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function polygonPath(points: PolygonPoint[]): string {

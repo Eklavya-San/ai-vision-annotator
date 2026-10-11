@@ -137,6 +137,21 @@ export default function ReviewPage() {
 
   const router = useRouter();
 
+  // Navigate to another image, auto-saving any dirty annotations first.
+  async function handleNavigate(target: DatasetImage | undefined | null) {
+    if (!target) return;
+    if (dirtyIds.length > 0) {
+      const results = await Promise.all(dirtyIds.map((id) => onSave(id, {})));
+      if (results.some((ok) => !ok)) {
+        const discard = window.confirm(
+          'Some changes failed to save. Discard unsaved edits and continue?',
+        );
+        if (!discard) return;
+      }
+    }
+    router.push(`/datasets/${datasetId}/review/${target.id}`);
+  }
+
   // Keyboard shortcuts: [ prev, ] next
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -152,15 +167,15 @@ export default function ReviewPage() {
       }
       if (e.key === '[' && prev) {
         e.preventDefault();
-        router.push(`/datasets/${datasetId}/review/${prev.id}`);
+        void handleNavigate(prev);
       } else if (e.key === ']' && next) {
         e.preventDefault();
-        router.push(`/datasets/${datasetId}/review/${next.id}`);
+        void handleNavigate(next);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [prev, next, datasetId, router]);
+  });
 
   if (error && !dataset) {
     return (
@@ -192,7 +207,7 @@ export default function ReviewPage() {
           href={`/datasets/${datasetId}`}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Back to {`«${dataset.name}»`}
+          ← Back to {dataset.name}
         </Link>
 
         <div className="flex items-center gap-2">
@@ -203,17 +218,17 @@ export default function ReviewPage() {
             size="sm"
             variant="ghost"
             disabled={!prev}
-            onClick={() => { if (prev) router.push(`/datasets/${datasetId}/review/${prev.id}`); }}
+            onClick={() => { void handleNavigate(prev); }}
           >
-            ← Prev <kbd className="ml-1 rounded border border-border px-1 text-[10px]">[</kbd>
+            ← Prev <kbd className="ml-1 rounded border border-border px-1 text-[11px]">[</kbd>
           </Button>
           <Button
             size="sm"
             variant="ghost"
             disabled={!next}
-            onClick={() => { if (next) router.push(`/datasets/${datasetId}/review/${next.id}`); }}
+            onClick={() => { void handleNavigate(next); }}
           >
-            Next → <kbd className="ml-1 rounded border border-border px-1 text-[10px]">]</kbd>
+            Next → <kbd className="ml-1 rounded border border-border px-1 text-[11px]">]</kbd>
           </Button>
         </div>
       </div>

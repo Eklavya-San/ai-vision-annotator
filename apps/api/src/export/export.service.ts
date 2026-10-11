@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { buildZip, ZipEntry } from './zip-writer';
 import { Bbox, yoloFileForImage } from './yolo-format';
@@ -10,21 +11,22 @@ import {
 
 export type ExportFormat = 'yolo' | 'coco';
 
-interface DbAnnotation {
-  id: string;
-  label: string;
-  confidence: number | null;
-  bbox: unknown;
-  polygon: unknown;
-}
+/**
+ * Prisma annotation-row shape, inferred from the generated Prisma client so it
+ * can never drift from the schema.
+ */
+type DbAnnotation = Awaited<ReturnType<typeof PrismaClient.prototype.annotation.findMany>>[number];
 
-interface DbImage {
-  id: string;
-  width: number | null;
-  height: number | null;
-  originalName: string;
+/**
+ * Prisma image-row shape, inferred from the generated Prisma client.
+ *
+ * The public model type never carries the `annotations` relation, but this
+ * export query selects it per image, so the relation is folded in here to type
+ * the shape the rest of this module actually iterates over.
+ */
+type DbImage = Awaited<ReturnType<typeof PrismaClient.prototype.image.findMany>>[number] & {
   annotations: DbAnnotation[];
-}
+};
 
 const COCO_EXTENSION_KEYS = ['jpg', 'jpeg', 'png'];
 
@@ -76,10 +78,10 @@ export class ExportService {
     labels.forEach((l, i) => classIndex.set(l, i));
 
     if (format === 'yolo') {
-      return this.buildYoloZip(images, classIndex, dataset.name);
+      return this.buildYoloZip(images as unknown as DbImage[], classIndex, dataset.name);
     }
     // format === 'coco'
-    return this.buildCocoJson(images, classIndex, dataset.name);
+    return this.buildCocoJson(images as unknown as DbImage[], classIndex, dataset.name);
   }
 
   private buildYoloZip(
@@ -88,12 +90,21 @@ export class ExportService {
     datasetName: string,
   ): Buffer {
     const entries: ZipEntry[] = [];
+    const seenStems = new Map<string, number>();
 
     for (const img of images) {
-      const stem = stemFor(img.originalName);
+      // Images with unknown dimensions cannot be normalized to YOLO
+      // coordinates — skip their label file instead of failing the export.
+      if (!img.width || !img.height) continue;
+      const base = stemFor(img.originalName);
+      const count = seenStems.get(base) ?? 0;
+      seenStems.set(base, count + 1);
+      // Deterministic disambiguation on collision: photo.png + photo.jpg
+      // become photo.txt and photo-<last8 id>.txt.
+      const stem = count === 0 ? base : `${base}-${img.id.slice(-8)}`;
       const bboxAnnotations = img.annotations
         .filter((a) => hasBbox(a.bbox))
-        .map((a) => ({ bbox: a.bbox as Bbox, label: a.label }));
+        .map((a) => ({ bbox: a.bbox as unknown as Bbox, label: a.label }));
 
       const content = yoloFileForImage({
         annotations: bboxAnnotations,
@@ -143,7 +154,7 @@ export class ExportService {
           imageId: img.id,
           label: a.label,
           confidence: a.confidence,
-          bbox: hasBbox(a.bbox) ? (a.bbox as Bbox) : null,
+          bbox: hasBbox(a.bbox) ? (a.bbox as unknown as Bbox) : null,
           polygon: hasPolygon(a.polygon) ? (a.polygon as Array<{ x: number; y: number }>) : null,
         });
       }

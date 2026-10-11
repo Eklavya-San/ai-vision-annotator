@@ -78,7 +78,7 @@ function ImageCard({ datasetId, image }: { datasetId: string; image: DatasetImag
 
       <div className="px-3 py-2">
         <p className="truncate text-xs font-medium" title={image.originalName}>{image.originalName}</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           {(Number(image.sizeBytes) / 1024).toFixed(0)} KB
         </p>
       </div>

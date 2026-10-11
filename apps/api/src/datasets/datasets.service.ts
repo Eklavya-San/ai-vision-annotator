@@ -30,14 +30,16 @@ export class DatasetsService {
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.dataset.findUniqueOrThrow({
+  async findOne(id: string) {
+    const dataset = await this.prisma.dataset.findUniqueOrThrow({
       where: { id },
-      include: { images: true, model: true },
+      include: { project: { select: { name: true } } },
     });
+    const { project, ...data } = dataset;
+    return { ...data, projectName: project.name };
   }
 
-  async triggerAnnotation(datasetId: string): Promise<{ queued: number }> {
+  async triggerAnnotation(datasetId: string): Promise<{ accepted: number }> {
     const dataset = await this.prisma.dataset.findUniqueOrThrow({
       where: { id: datasetId },
       include: { images: true },
@@ -46,16 +48,23 @@ export class DatasetsService {
     const instructions = dataset.instructions ?? '';
     const labels = (dataset.labels as string[] | undefined) ?? [];
 
-    const jobs: AnnotationJobData[] = dataset.images.map((image) => ({
-      datasetId,
-      imageId: image.id,
-      storageKey: image.storageKey,
-      instructions,
-      labels,
-    }));
+    // Only queue images the pipeline can act on: freshly uploaded or
+    // previously failed. Annotated images are skipped so a re-run never
+    // wipes human-corrected annotations.
+    const jobs: AnnotationJobData[] = dataset.images
+      .filter((image) => image.status === 'uploaded' || image.status === 'failed')
+      .map((image) => ({
+        datasetId,
+        imageId: image.id,
+        storageKey: image.storageKey,
+        instructions,
+        labels,
+      }));
 
-    await this.producer.queueDatasetAnnotation(jobs);
+    if (jobs.length > 0) {
+      await this.producer.queueDatasetAnnotation(jobs);
+    }
 
-    return { queued: jobs.length };
+    return { accepted: jobs.length };
   }
 }

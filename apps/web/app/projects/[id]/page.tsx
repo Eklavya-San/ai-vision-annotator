@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { LabelBadge } from '@/components/ui/Badge';
-import { inputClass, labelClass, textareaClass } from '@/components/ui/input';
+import { inputClass, labelClass, textareaClass, focusRingClass, requiredMark } from '@/components/ui/input';
 import { createDataset, getProject } from '@/lib/api';
 import type { ProjectDetail } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
@@ -19,6 +19,7 @@ export default function ProjectDetailPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   const [form, setForm] = React.useState({ name: '', instructions: '' });
   const [tags, setTags] = React.useState<string[]>([]);
@@ -61,6 +62,7 @@ export default function ProjectDetailPage() {
     if (!labels.length) return;
     if (!form.name.trim()) return;
     setSubmitting(true);
+    setFormError(null);
     try {
       await createDataset(projectId, {
         name: form.name.trim(),
@@ -72,7 +74,8 @@ export default function ProjectDetailPage() {
       setDialogOpen(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create dataset');
+      // Show inside the dialog so it isn't hidden behind the overlay.
+      setFormError(err instanceof Error ? err.message : 'Failed to create dataset');
     } finally {
       setSubmitting(false);
     }
@@ -111,7 +114,7 @@ export default function ProjectDetailPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">Created {formatDate(data.createdAt)}</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => { setFormError(null); setDialogOpen(true); }}>
           <PlusIcon /> New Dataset
         </Button>
       </div>
@@ -164,8 +167,13 @@ export default function ProjectDetailPage() {
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title="New Dataset">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </div>
+          )}
           <div>
-            <label className={labelClass} htmlFor="d-name">Dataset name</label>
+            <label className={labelClass} htmlFor="d-name">Dataset name{requiredMark}</label>
             <input
               id="d-name"
               className={inputClass}
@@ -177,12 +185,17 @@ export default function ProjectDetailPage() {
             />
           </div>
           <div>
-            <label className={labelClass} htmlFor="d-labels">Target labels</label>
+            <label className={labelClass} htmlFor="d-labels">Target labels{requiredMark}</label>
             <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5">
               {tags.map((t) => (
                 <span key={t} className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary border border-primary/20">
                   {t}
-                  <button type="button" onClick={() => setTags((x) => x.filter((v) => v !== t))} aria-label={`Remove ${t}`}>
+                  <button
+                    type="button"
+                    onClick={() => setTags((x) => x.filter((v) => v !== t))}
+                    aria-label={`Remove ${t}`}
+                    className={`-m-1 rounded p-1 leading-none hover:bg-primary/20 ${focusRingClass}`}
+                  >
                     ×
                   </button>
                 </span>

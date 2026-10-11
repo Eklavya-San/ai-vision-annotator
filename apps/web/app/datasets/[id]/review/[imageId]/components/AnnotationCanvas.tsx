@@ -190,6 +190,8 @@ export function AnnotationCanvas({ image, annotations, selectedId, onSelect, onB
                   stroke={color}
                   strokeWidth={isSel ? 3 : 2}
                   opacity={opacity}
+                  style={{ cursor: 'pointer' }}
+                  onPointerDown={(e) => { e.stopPropagation(); onSelect(a.id); }}
                   onPointerEnter={() => setHoverId(a.id)}
                   onPointerLeave={() => setHoverId(null)}
                 />
@@ -236,11 +238,17 @@ export function AnnotationCanvas({ image, annotations, selectedId, onSelect, onB
             <span className="font-semibold">{tip.label}</span>
             <span className="text-muted-foreground">{formatPercent(tip.confidence)}</span>
             {tip.isCorrected && (
-              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Corrected</span>
+              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-amber-300">Corrected</span>
             )}
           </div>
         );
       })()}
+
+      {ready && annotations.length > 0 && (
+        <p className="pointer-events-none absolute bottom-3 left-3 z-20 rounded-md bg-black/60 px-2.5 py-1.5 text-[11px] text-slate-300 backdrop-blur-sm">
+          Drag a box to move it · drag corners to resize · click to select
+        </p>
+      )}
     </div>
   );
 }

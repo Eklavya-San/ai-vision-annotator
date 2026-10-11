@@ -40,6 +40,13 @@ describe('TransformBigIntInterceptor', () => {
       expect(serializeBigInt(date)).toBe(date);
     });
 
+    it('should pass Buffer and Uint8Array through untouched (binary responses)', () => {
+      const buf = Buffer.from([80, 75, 3, 4]);
+      expect(serializeBigInt(buf)).toBe(buf);
+      const bytes = new Uint8Array([1, 2, 3]);
+      expect(serializeBigInt(bytes)).toBe(bytes);
+    });
+
     it('should recursively serialize BigInt in objects', () => {
       const input = {
         id: 'img_123',

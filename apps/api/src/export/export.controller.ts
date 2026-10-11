@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query, Res, StreamableFile } from '@nestjs/common';
 import { ExportService, ExportFormat } from './export.service';
 
 /** Minimal structural typing of the platform response we touch (avoids a
@@ -17,28 +17,30 @@ export class ExportController {
    * GET /api/datasets/:id/export?format=yolo   -> ZIP archive (application/zip)
    * GET /api/datasets/:id/export?format=coco   -> COCO JSON   (application/json)
    *
-   * Content headers are chosen per format via `@Res({ passthrough: true })`
-   * so the response body flows through Nest's normal serialization pipeline
-   * while we still control the transfer content type for the ZIP payload.
+   * The ZIP is returned as a StreamableFile so Nest streams the raw bytes
+   * instead of JSON-serializing the Buffer. Headers are chosen per format
+   * via `@Res({ passthrough: true })`.
    */
   @Get(':id/export')
   async export(
     @Param('id') id: string,
     @Query('format') format: string | undefined,
     @Res({ passthrough: true }) res: HttpResponseLike,
-  ) {
+  ): Promise<StreamableFile | string> {
     const parsed = parseFormat(format);
+    const result = await this.exportService.export(id, parsed);
 
     if (parsed === 'yolo') {
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', 'attachment; filename="dataset-export.zip"');
-    } else {
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="coco.json"');
+      res.setHeader('Cache-Control', 'no-store');
+      return new StreamableFile(result as Buffer);
     }
-    res.setHeader('Cache-Control', 'no-store');
 
-    return this.exportService.export(id, parsed);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="coco.json"');
+    res.setHeader('Cache-Control', 'no-store');
+    return result as string;
   }
 }
 
