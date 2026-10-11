@@ -162,7 +162,7 @@ function ExportMenu({ datasetId, name }: { datasetId: string; name: string }) {
 
   function download(format: 'yolo' | 'coco') {
     const safe = name.replace(/\s+/g, '-').toLowerCase();
-    downloadExport(datasetId, format, `${safe}.${format === 'yolo' ? 'yolo.zip' : 'coco.zip'}`);
+    downloadExport(datasetId, format, `${safe}.${format === 'yolo' ? 'yolo.zip' : 'coco.json'}`);
     close();
   }
 

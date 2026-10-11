@@ -90,12 +90,18 @@ export class ExportService {
     datasetName: string,
   ): Buffer {
     const entries: ZipEntry[] = [];
+    const seenStems = new Map<string, number>();
 
     for (const img of images) {
       // Images with unknown dimensions cannot be normalized to YOLO
       // coordinates — skip their label file instead of failing the export.
       if (!img.width || !img.height) continue;
-      const stem = stemFor(img.originalName);
+      const base = stemFor(img.originalName);
+      const count = seenStems.get(base) ?? 0;
+      seenStems.set(base, count + 1);
+      // Deterministic disambiguation on collision: photo.png + photo.jpg
+      // become photo.txt and photo-<last8 id>.txt.
+      const stem = count === 0 ? base : `${base}-${img.id.slice(-8)}`;
       const bboxAnnotations = img.annotations
         .filter((a) => hasBbox(a.bbox))
         .map((a) => ({ bbox: a.bbox as unknown as Bbox, label: a.label }));
