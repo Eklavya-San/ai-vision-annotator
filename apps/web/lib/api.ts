@@ -106,11 +106,14 @@ export async function uploadImage(datasetId: string, file: File): Promise<Datase
   // Read dimensions client-side so the grid has aspect-ratio metadata.
   const { width, height } = await readImageDimensions(file).catch(() => ({ width: undefined, height: undefined }));
 
-  await fetch(uploadUrl, {
+  const put = await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': contentType },
     body: file,
   });
+  if (!put.ok) {
+    throw new ApiError(put.status, `Image upload failed (${put.status})`);
+  }
 
   const sha256 = await sha256Hex(file);
   return registerImage(datasetId, {

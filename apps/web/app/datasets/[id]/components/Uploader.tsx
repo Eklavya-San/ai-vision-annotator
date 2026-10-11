@@ -43,9 +43,17 @@ export function Uploader({ datasetId, labels, onUploaded }: UploaderProps) {
   }
 
   function addFiles(list: FileList | File[]) {
+    const MAX = 50 * 1024 * 1024; // matches API MAX_IMAGE_BYTES
     const files = Array.from(list).filter((f) => f.type.startsWith('image/'));
     if (!files.length) return;
-    setItems((prev) => [...prev, ...files.map((file) => ({ id: newId(), file, phase: 'pending' as const }))]);
+    setItems((prev) => [
+      ...prev,
+      ...files.map((file) =>
+        file.size > MAX
+          ? { id: newId(), file, phase: 'error' as const, error: 'File too large (max 50 MB)' }
+          : { id: newId(), file, phase: 'pending' as const },
+      ),
+    ]);
     void processQueue();
   }
 
