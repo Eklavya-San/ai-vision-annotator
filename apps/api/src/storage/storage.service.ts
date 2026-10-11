@@ -4,6 +4,7 @@ import {
   CreateBucketCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -63,6 +64,20 @@ export class StorageService implements OnModuleInit {
 
   async createDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
     return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn });
+  }
+
+  /** Actual object size in bytes, or `null` when the object does not exist. */
+  async objectSize(key: string): Promise<number | null> {
+    try {
+      const res = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return res.ContentLength ?? null;
+    } catch (err: unknown) {
+      const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (e?.name === 'NotFound' || e?.$metadata?.httpStatusCode === 404) return null;
+      throw err;
+    }
   }
 
   async putObject(key: string, body: Uint8Array | Buffer, contentType: string): Promise<void> {
