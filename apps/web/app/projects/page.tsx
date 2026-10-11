@@ -1,18 +1,20 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { createProject, getProjects } from '@/lib/api';
 import type { ProjectListItem } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { inputClass, labelClass, textareaClass } from '@/components/ui/input';
+import { inputClass, labelClass, textareaClass, requiredMark } from '@/components/ui/input';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = React.useState<ProjectListItem[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({ name: '', description: '' });
 
   const load = React.useCallback(async () => {
@@ -30,13 +32,15 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSubmitting(true);
+    setFormError(null);
     try {
       await createProject({ name: form.name.trim(), description: form.description.trim() || undefined });
       setForm({ name: '', description: '' });
       setDialogOpen(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project');
+      // Show inside the dialog so it isn't hidden behind the overlay.
+      setFormError(err instanceof Error ? err.message : 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
@@ -51,7 +55,7 @@ export default function ProjectsPage() {
             Organize datasets and annotation work by project.
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => { setFormError(null); setDialogOpen(true); }}>
           <PlusIcon /> New Project
         </Button>
       </header>
@@ -65,7 +69,7 @@ export default function ProjectsPage() {
       {!projects ? (
         <SkeletonGrid />
       ) : projects.length === 0 ? (
-        <EmptyState onCreate={() => setDialogOpen(true)} />
+        <EmptyState onCreate={() => { setFormError(null); setDialogOpen(true); }} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
@@ -76,8 +80,13 @@ export default function ProjectsPage() {
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title="New Project">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </div>
+          )}
           <div>
-            <label className={labelClass} htmlFor="p-name">Name</label>
+            <label className={labelClass} htmlFor="p-name">Name{requiredMark}</label>
             <input
               id="p-name"
               className={inputClass}
@@ -111,9 +120,9 @@ export default function ProjectsPage() {
 
 function ProjectCard({ project }: { project: ProjectListItem }) {
   return (
-    <a
+    <Link
       href={`/projects/${project.id}`}
-      className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-primary/5"
+      className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-semibold text-foreground group-hover:text-primary">{project.name}</h3>
@@ -125,7 +134,7 @@ function ProjectCard({ project }: { project: ProjectListItem }) {
         {project.description || <span className="italic text-muted-foreground/60">No description</span>}
       </p>
       <p className="mt-3 text-xs text-muted-foreground">Created {formatDate(project.createdAt)}</p>
-    </a>
+    </Link>
   );
 }
 

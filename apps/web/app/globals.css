@@ -1,5 +1,30 @@
 @import 'tailwindcss';
 
+/* Semantic design tokens (Tailwind v4). Every bg-, text- and border- utility
+   used across the app resolves from here. Dark-only palette, slate base. */
+@theme {
+  --color-background: #020617;            /* slate-950 */
+  --color-foreground: #f8fafc;            /* slate-50 */
+  --color-card: #0f172a;                  /* slate-900 */
+  --color-border: #293548;                /* between slate-800/700 — visible on bg */
+  --color-primary: #3b82f6;               /* blue-500 */
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e293b;             /* slate-800 */
+  --color-secondary-foreground: #e2e8f0;  /* slate-200 */
+  --color-accent: #1e293b;
+  --color-accent-foreground: #f8fafc;
+  --color-muted-foreground: #94a3b8;      /* slate-400 — ≥4.5:1 on bg & card */
+  --color-destructive: #f43f5e;           /* rose-500 */
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #3b82f6;
+
+  --animate-upload-slide: upload-slide 1.2s ease-in-out infinite;
+  @keyframes upload-slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+}
+
 :root {
   color-scheme: dark;
 }
@@ -15,7 +40,19 @@ body {
 }
 
 body {
-  background: #020617;
-  color: #f8fafc;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans, ui-sans-serif), ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

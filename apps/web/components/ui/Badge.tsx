@@ -12,7 +12,7 @@ export function StatusBadge({ status }: { status: string }) {
     dot: 'bg-white/40',
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${s.className}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${s.className}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
@@ -23,14 +23,6 @@ export function LabelBadge({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary border border-primary/20">
       {label}
-    </span>
-  );
-}
-
-export function CorrectedTag() {
-  return (
-    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase text-yellow-300 bg-yellow-500/10 border border-yellow-500/30">
-      Corrected
     </span>
   );
 }

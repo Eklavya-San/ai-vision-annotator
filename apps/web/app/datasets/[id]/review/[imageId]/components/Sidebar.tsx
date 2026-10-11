@@ -3,6 +3,8 @@
 import * as React from 'react';
 import type { Annotation, Dataset, UpdateAnnotationInput } from '@/lib/types';
 import { labelColor, formatPercent } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
+import { focusRingClass } from '@/components/ui/input';
 
 interface SidebarProps {
   dataset: Dataset;
@@ -25,12 +27,23 @@ export function Sidebar({
   const dirtyCount = dirtyIds.length;
   const selectedDirty = selected && dirtyIds.includes(selected.id);
 
+  function handleDelete() {
+    if (!selected) return;
+    if (!window.confirm(`Delete the "${selected.label}" annotation? This cannot be undone.`)) return;
+    onDelete(selected.id);
+  }
+
   return (
     <aside className="flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-4">
       <div>
         <h3 className="text-sm font-semibold">Dataset</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">{dataset.name}</p>
       </div>
+
+      {/* Screen-reader announcements for save state changes. */}
+      <p aria-live="polite" className="sr-only">
+        {savingId ? 'Saving annotation…' : saved ? 'Annotation saved' : ''}
+      </p>
 
       {selected && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
@@ -39,7 +52,7 @@ export function Sidebar({
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: labelColor(selected.label) }} />
             <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={selected.label}>{selected.label}</span>
           </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {selected.bbox ? `${Math.round(selected.bbox.width)}×${Math.round(selected.bbox.height)} px` : `polygon · ${selected.polygon?.length ?? 0} pts`}
             {' · '}
             {formatPercent(selected.confidence)}
@@ -57,7 +70,7 @@ export function Sidebar({
         </h4>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <ul className="space-y-2">
+          <ul className="space-y-2" aria-label="Annotations">
             {annotations.length === 0 && (
               <li className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
                 No annotations yet.
@@ -68,28 +81,31 @@ export function Sidebar({
               const isSel = a.id === selectedId;
               const isDirty = dirtyIds.includes(a.id);
               return (
-                <li
-                  key={a.id}
-                  onClick={() => onSelect(a.id)}
-                  className={`cursor-pointer rounded-lg border p-2.5 transition-all ${
-                    isSel
-                      ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40'
-                      : 'border-border hover:border-primary/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium" title={a.label}>{a.label}</span>
-                    {a.isCorrected && (
-                      <span title="Was corrected by a human" className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">✓</span>
-                    )}
-                    <span className="shrink-0 text-xs text-muted-foreground" title="Model confidence">{formatPercent(a.confidence)}</span>
-                  </div>
-                  <p className="mt-1 truncate text-[11px] text-muted-foreground"
-                    title={a.bbox ? `x:${a.bbox.x}, y:${a.bbox.y}, w:${a.bbox.width}, h:${a.bbox.height}` : `polygon · ${a.polygon?.length ?? 0} points`}>
-                    {isDirty && <span className="mr-1 font-semibold text-amber-300">modified · </span>}
-                    {a.bbox ? `x:${a.bbox.x}  y:${a.bbox.y}  ${a.bbox.width}×${a.bbox.height}` : `polygon · ${a.polygon?.length ?? 0} pts`}
-                  </p>
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(a.id)}
+                    aria-current={isSel || undefined}
+                    className={`w-full cursor-pointer rounded-lg border p-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      isSel
+                        ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40'
+                        : 'border-border hover:border-primary/30'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium" title={a.label}>{a.label}</span>
+                      {a.isCorrected && (
+                        <span title="Was corrected by a human" className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-amber-300">✓</span>
+                      )}
+                      <span className="shrink-0 text-xs text-muted-foreground" title="Model confidence">{formatPercent(a.confidence)}</span>
+                    </span>
+                    <span className="mt-1 block truncate text-[11px] text-muted-foreground"
+                      title={a.bbox ? `x:${a.bbox.x}, y:${a.bbox.y}, w:${a.bbox.width}, h:${a.bbox.height}` : `polygon · ${a.polygon?.length ?? 0} points`}>
+                      {isDirty && <span className="mr-1 font-semibold text-amber-300">modified · </span>}
+                      {a.bbox ? `x:${a.bbox.x}  y:${a.bbox.y}  ${a.bbox.width}×${a.bbox.height}` : `polygon · ${a.polygon?.length ?? 0} pts`}
+                    </span>
+                  </button>
                 </li>
               );
             })}
@@ -103,7 +119,7 @@ export function Sidebar({
             <select
               value={selected.label}
               onChange={(e) => onLabelChange(selected.id, e.target.value)}
-              className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs"
+              className={`h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs ${focusRingClass}`}
               aria-label="Reclassify selected annotation"
             >
               {dataset.labels.map((l) => (
@@ -114,20 +130,18 @@ export function Sidebar({
               )}
             </select>
 
-            <button
-              className="h-8 rounded-md border border-border bg-background px-3 text-xs hover:bg-accent hover:text-accent-foreground"
-              onClick={() => onDelete(selected.id)}
-            >
+            <Button size="sm" variant="danger" onClick={handleDelete}>
               Delete
-            </button>
+            </Button>
 
-            <button
-              className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            <Button
+              size="sm"
               disabled={!selectedDirty || savingId === selected.id}
+              loading={savingId === selected.id}
               onClick={() => { void onSave(selected.id, {}); }}
             >
               {savingId === selected.id ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
-            </button>
+            </Button>
           </>
         ) : (
           <p className="w-full text-xs text-muted-foreground">Select an annotation to edit, reclassify, or delete it.</p>

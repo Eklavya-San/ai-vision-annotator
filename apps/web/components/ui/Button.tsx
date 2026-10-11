@@ -6,6 +6,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 export function Button({
@@ -15,6 +16,7 @@ export function Button({
   disabled,
   className = '',
   children,
+  ref,
   ...rest
 }: ButtonProps) {
   const base =
@@ -32,6 +34,7 @@ export function Button({
   };
   return (
     <button
+      ref={ref}
       className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
       disabled={loading || disabled}
       {...rest}
