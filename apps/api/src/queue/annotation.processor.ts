@@ -35,7 +35,7 @@ export class AnnotationProcessor extends WorkerHost {
         select: { width: true, height: true },
       });
       const clean = sanitizeAnnotations(result, {
-        allowedLabels: labels,
+        allowedLabels: labels.length ? labels : undefined,
         imageWidth: image?.width ?? null,
         imageHeight: image?.height ?? null,
       });
