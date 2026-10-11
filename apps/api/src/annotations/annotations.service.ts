@@ -32,8 +32,8 @@ export class AnnotationsService {
 
     if (dto.label !== undefined) data.label = dto.label;
     if (dto.confidence !== undefined) data.confidence = dto.confidence;
-    if (dto.bbox !== undefined) data.bbox = dto.bbox;
-    if (dto.polygon !== undefined) data.polygon = dto.polygon;
+    if (dto.bbox !== undefined) data.bbox = { ...dto.bbox };
+    if (dto.polygon !== undefined) data.polygon = dto.polygon.map((p) => ({ ...p }));
 
     return this.prisma.annotation.update({ where: { id }, data });
   }

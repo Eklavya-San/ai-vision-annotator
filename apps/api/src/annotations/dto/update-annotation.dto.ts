@@ -1,9 +1,50 @@
-import { IsOptional, IsString, MinLength, IsNumber, Min, Max, IsArray, IsObject } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDefined,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+
+export class BboxDto {
+  @IsNumber()
+  @Min(0)
+  x!: number;
+
+  @IsNumber()
+  @Min(0)
+  y!: number;
+
+  @IsNumber()
+  @IsPositive()
+  width!: number;
+
+  @IsNumber()
+  @IsPositive()
+  height!: number;
+}
+
+export class PolygonPointDto {
+  @IsNumber()
+  x!: number;
+
+  @IsNumber()
+  y!: number;
+}
 
 export class UpdateAnnotationDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
+  @MaxLength(120)
   label?: string;
 
   @IsOptional()
@@ -12,14 +53,16 @@ export class UpdateAnnotationDto {
   @Max(1)
   confidence?: number;
 
-  // Bounding box as { x, y, width, height }. Plain-object shape: the value
-  // round-trips through Prisma Json (JsonValue), so we validate "is a shape".
   @IsOptional()
-  @IsObject()
-  bbox?: Record<string, number>;
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => BboxDto)
+  bbox?: BboxDto;
 
-  // Polygon as [{ x, y }, ...].
   @IsOptional()
   @IsArray()
-  polygon?: Array<Record<string, number>>;
+  @ArrayMinSize(3)
+  @ValidateNested({ each: true })
+  @Type(() => PolygonPointDto)
+  polygon?: PolygonPointDto[];
 }
