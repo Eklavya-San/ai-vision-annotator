@@ -5,6 +5,7 @@ import { AnnotationJobData, ANNOTATION_QUEUE } from './constants';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { ProvidersService } from '../providers/providers.service';
+import { sanitizeAnnotations } from '../providers/annotation-result.schema';
 
 @Processor(ANNOTATION_QUEUE)
 @Injectable()
@@ -29,13 +30,23 @@ export class AnnotationProcessor extends WorkerHost {
       const imageUrl = await this.storage.createDownloadUrl(storageKey);
       const result = await this.providers.annotate({ imageUrl, instructions, labels });
 
+      const image = await this.prisma.image.findUnique({
+        where: { id: imageId },
+        select: { width: true, height: true },
+      });
+      const clean = sanitizeAnnotations(result, {
+        allowedLabels: labels,
+        imageWidth: image?.width ?? null,
+        imageHeight: image?.height ?? null,
+      });
+
       await this.prisma.$transaction(async (tx) => {
         // Re-runs replace prior annotations for the image (idempotent).
         await tx.annotation.deleteMany({ where: { imageId } });
 
-        if (result.annotations.length > 0) {
+        if (clean.annotations.length > 0) {
           await tx.annotation.createMany({
-            data: result.annotations.map((annotation) => ({
+            data: clean.annotations.map((annotation) => ({
               imageId,
               label: annotation.label,
               confidence: annotation.confidence ?? null,
