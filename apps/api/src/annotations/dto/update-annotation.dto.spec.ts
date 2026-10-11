@@ -33,4 +33,9 @@ describe('UpdateAnnotationDto', () => {
     const errors = await validateBody({ confidence: 1.5 });
     expect(errors).toHaveLength(1);
   });
+
+  it('treats explicit null bbox/polygon as absent (no validation errors)', async () => {
+    const errors = await validateBody({ bbox: null, polygon: null });
+    expect(errors).toHaveLength(0);
+  });
 });
