@@ -1,10 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
-import { PrismaService } from './database/prisma.service';
+import { Controller, Get, OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Redis } from 'ioredis';
+import { PrismaService } from './database/prisma.service';
 
 @Controller('health')
-export class HealthController {
+export class HealthController implements OnModuleDestroy {
   private readonly redis: Redis;
 
   constructor(
@@ -38,20 +38,34 @@ export class HealthController {
     }
 
     try {
-      await this.redis.connect();
-      await this.redis.ping();
+      await this.pingRedis();
       checks.redis = 'ok';
-      await this.redis.quit();
     } catch {
       checks.redis = 'error';
+      // Leave the connection in a restartable state for the next probe.
+      if (this.redis.status !== 'end') await this.redis.quit().catch(() => undefined);
     }
 
     const ready = Object.values(checks).every((status) => status === 'ok');
-    return {
+    const body = {
       status: ready ? 'ok' : 'degraded',
       ready,
       checks,
       timestamp: new Date().toISOString(),
     };
+    if (!ready) throw new ServiceUnavailableException(body);
+    return body;
+  }
+
+  /** Ping Redis, reconnecting after a previous quit(). */
+  private async pingRedis(): Promise<void> {
+    if (this.redis.status === 'end' || this.redis.status === 'close') {
+      await this.redis.connect();
+    }
+    await this.redis.ping();
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.redis.quit().catch(() => undefined);
   }
 }
