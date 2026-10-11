@@ -92,6 +92,9 @@ export class ExportService {
     const entries: ZipEntry[] = [];
 
     for (const img of images) {
+      // Images with unknown dimensions cannot be normalized to YOLO
+      // coordinates — skip their label file instead of failing the export.
+      if (!img.width || !img.height) continue;
       const stem = stemFor(img.originalName);
       const bboxAnnotations = img.annotations
         .filter((a) => hasBbox(a.bbox))

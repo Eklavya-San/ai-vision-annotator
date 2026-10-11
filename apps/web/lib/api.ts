@@ -142,7 +142,7 @@ function readImageDimensions(file: File): Promise<{ width?: number; height?: num
 
 // ── Annotation pipeline ──────────────────────────────────────────────────
 export const triggerAnnotation = (datasetId: string) =>
-  request<{ accepted: number; message?: string }>(`/datasets/${datasetId}/annotate`, { method: 'POST' });
+  request<{ accepted: number }>(`/datasets/${datasetId}/annotate`, { method: 'POST' });
 
 // ── Annotations ──────────────────────────────────────────────────────────
 export const getImageAnnotations = (imageId: string) => request<Annotation[]>(`/images/${imageId}/annotations`);
